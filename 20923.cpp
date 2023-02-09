@@ -1,75 +1,83 @@
 #include <iostream>
+#include <vector>
 #include <deque>
 
 using namespace std;
 
-deque<int> d[2], g[2];
-int turn = 0;
+typedef vector<deque<int>> cards;
+const int DO = 0, SU = 1;
 
-void round()
+// 승리 판단하기
+string judge(cards& deck)
 {
-	// SUYEON
-	if (!g[0].empty() && !g[1].empty() && (g[0].front() + g[1].front() == 5))
-	{
-		while (!g[0].empty())
-		{
-			d[1].push_back(g[0].back());
-			g[0].pop_back();
-		}
-		while (!g[1].empty())
-		{
-			d[1].push_back(g[1].back());
-			g[1].pop_back();
-		}
-	}
-	// DODO
-	else if ((!g[0].empty() && g[0].front() == 5) || (!g[1].empty() && g[1].front() == 5))
-	{
-		while (!g[1].empty())
-		{
-			d[0].push_back(g[1].back());
-			g[1].pop_back();
-		}
-		while (!g[0].empty())
-		{
-			d[0].push_back(g[0].back());
-			g[0].pop_back();
-		}
-	}
-}
-
-string win()
-{
-	if (d[0].size() > d[1].size())
+	int do_deck = deck[DO].size(), su_deck = deck[SU].size();
+	if (do_deck > su_deck) {
 		return "do";
-	else if (d[0].size() < d[1].size())
+	}
+	else if (do_deck < su_deck) {
 		return "su";
+	}
 	return "dosu";
 }
 
-string game(int m)
-{
+// 그라운드에서 덱으로 카드 옮기기
+void groundToDeck(deque<int>& deck, deque<int>& ground) {
+	while (!ground.empty()) {
+		deck.push_back(ground.back());
+		ground.pop_back();
+	}
+}
+
+// 종을 울릴 수 있는 사람 판단
+int whoCanRingTheBell(cards& deck, cards& ground) {
+	if (!ground[DO].empty() && ground[DO].front() == 5) {
+		return DO;
+	}
+	else if (!ground[SU].empty() && ground[SU].front() == 5) {
+		return DO;
+	}
+	else if (!ground[DO].empty() && !ground[SU].empty() && (ground[DO].front() + ground[SU].front() == 5)) {
+		return SU;
+	}
+	return -1;
+}
+
+void ringTheBell(int player, cards& deck, cards& ground) {
+	groundToDeck(deck[player], ground[!player]); // 카드 가져가기 (상대 그라운드 -> 본인 덱)
+	groundToDeck(deck[player], ground[player]); // 카드 가져가기 (본인 그라운드 -> 본인 덱)
+}
+
+// 게임 진행
+string game(int m, cards& deck, cards& ground) {
+	bool turn = DO; // 도도 먼저
 	while (m--)
 	{
-		g[turn].push_front(d[turn].front());
-		d[turn].pop_front();
-		if (d[turn].empty())
+		ground[turn].push_front(deck[turn].front()); // 카드 내려놓기(덱 -> 그라운드)
+		deck[turn].pop_front();
+		if (deck[turn].empty()) {
 			break;
-		round();
-		turn = (turn == 1) ? 0 : 1;
+		}
+		int bell = whoCanRingTheBell(deck, ground); // 벨을 울릴 수 있는 사람
+		if (bell != -1) { // 종을 친 경우
+			ringTheBell(bell, deck, ground);
+		}
+		turn = !turn; // 차례 바꾸기
 	}
-	return win();
+	return judge(deck);
 }
 
 int main()
 {
-	int n, m, input1, input2;
+	int n, m, card1, card2;
+	cards deck(2), ground(2); // 0: 도도, 1: 수연
+	// 입력
 	cin >> n >> m;
-	for (int i = 0; i < n; i++)
-	{
-		cin >> input1 >> input2;
-		d[0].push_front(input1);
-		d[1].push_front(input2);
+	while (n--) {
+		cin >> card1 >> card2;
+		deck[0].push_front(card1);
+		deck[1].push_front(card2);
 	}
-	cout << game(m)<<'\n';
+	// 출력 & 연산
+	cout << game(m, deck, ground) << '\n';
+	return 0;
 }
